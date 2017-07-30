@@ -68,6 +68,16 @@ sub tear_down
     $self->SUPER::tear_down();
 }
 
+Cassandane::Cyrus::TestCase::magic(InternalDateReceivedHeader => sub {
+    my $conf = shift;
+    $conf->config_set('internaldate_heuristic' => 'receivedheader');
+});
+
+Cassandane::Cyrus::TestCase::magic(InternalDateStandard => sub {
+    my $conf = shift;
+    $conf->config_set('internaldate_heuristic' => 'standard');
+});
+
 #
 # Test zeroed out data across the UID
 #
@@ -205,6 +215,56 @@ sub test_reconstruct_removedfile
     @records = $imaptalk->search("all");
     $self->assert_num_equals(9, scalar @records);
     $self->assert(not grep { $_ == 6 } @records);
+}
+
+sub test_reconstruct_truncated_foo
+    : InternalDateReceivedHeader
+{
+    my ($self) = @_;
+
+    my $imaptalk = $self->{store}->get_client();
+
+    for (1..10) {
+        my $msg = $self->{gen}->generate(subject => "subject $_");
+        $self->{store}->write_message($msg, flags => ["\\Seen", "\$NotJunk"]);
+    }
+    $self->{store}->write_end();
+    $imaptalk->select("INBOX") || die;
+
+    my @records = $imaptalk->search("all");
+    $self->assert_num_equals(10, scalar @records);
+    $self->assert(grep { $_ == 6 } @records);
+
+    $self->{instance}->run_command({ cyrus => 1 }, 'reconstruct');
+
+    @records = $imaptalk->search("all");
+    $self->assert_num_equals(10, scalar @records);
+    $self->assert(grep { $_ == 6 } @records);
+
+    # this needs a bit of magic to know where to write... so
+    # we do some hard-coded cyrus.index handling
+    my $basedir = $self->{instance}->{basedir};
+    my $file = "$basedir/data/user/cassandane/cyrus.index";
+    my $fh = IO::File->new($file, "+<");
+    die "NO SUCH FILE $file" unless $fh;
+    my $index = Cyrus::IndexFile->new($fh);
+
+    my $offset = $index->header('StartOffset') + (5 * $index->header('RecordSize'));
+    $fh->truncate($offset);
+    $fh->close();
+
+    # this time, the reconstruct will create the records again
+    $self->{instance}->run_command({ cyrus => 1 }, 'reconstruct', 'user.cassandane');
+
+    # XXX - this actually deletes everything, so we unselect and reselect.  A
+    # too-short cyrus.index is a fatal error, so we don't even try to read it.
+    $imaptalk->unselect();
+    $imaptalk->select("INBOX") || die;
+
+    @records = $imaptalk->search("all");
+    $self->assert_num_equals(10, scalar @records);
+    $self->assert(grep { $_ == 6 } @records);
+    $self->assert(not grep { $_ == 11 } @records);
 }
 
 1;

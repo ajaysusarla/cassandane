@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 #
-#  Copyright (c) 2011 Opera Software Australia Pty. Ltd.  All rights
-#  reserved.
+#  Copyright (c) 2017 FastMail Pty. Ltd.  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
@@ -15,22 +14,20 @@
 #     the documentation and/or other materials provided with the
 #     distribution.
 #
-#  3. The name "Opera Software Australia" must not be used to
+#  3. The name "Fastmail" must not be used to
 #     endorse or promote products derived from this software without
 #     prior written permission. For permission or any legal
 #     details, please contact
-# 	Opera Software Australia Pty. Ltd.
-# 	Level 50, 120 Collins St
-# 	Melbourne 3000
-# 	Victoria
-# 	Australia
+#         FastMail Pty. Ltd.
+#         Level 1, 91 William St
+#         Melbourne 3000
+#         Victoria
+#         Australia
 #
 #  4. Redistributions of any form whatsoever must retain the following
 #     acknowledgment:
-#     "This product includes software developed by Opera Software
-#     Australia Pty. Ltd."
-#
-#  OPERA SOFTWARE AUSTRALIA DISCLAIMS ALL WARRANTIES WITH REGARD TO
+#     "This product includes software developed by FastMail Pty. Ltd."
+#  FASTMAIL PTY LTD DISCLAIMS ALL WARRANTIES WITH REGARD TO
 #  THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
 #  AND FITNESS, IN NO EVENT SHALL OPERA SOFTWARE AUSTRALIA BE LIABLE
 #  FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
@@ -61,7 +58,7 @@ sub new
 {
     my $class = shift;
     return $class->SUPER::new({
-	    deliver => 1,
+            deliver => 1,
             adminstore => 1,
     }, @_);
 }
@@ -358,7 +355,7 @@ sub test_duplicate_suppression_off
     xlog "Create the target folder";
     my $imaptalk = $self->{store}->get_client();
     $imaptalk->create($folder)
-	or die "Cannot create $folder: $@";
+        or die "Cannot create $folder: $@";
     $self->{store}->set_fetch_attributes('uid');
 
     xlog "Deliver a message";
@@ -396,7 +393,7 @@ sub test_duplicate_suppression_on
     xlog "Create the target folder";
     my $imaptalk = $self->{store}->get_client();
     $imaptalk->create($folder1)
-	or die "Cannot create $folder1: $@";
+        or die "Cannot create $folder1: $@";
     $self->{store}->set_fetch_attributes('uid');
 
     xlog "Deliver a message";
@@ -418,7 +415,7 @@ sub test_duplicate_suppression_on
 
     xlog "Rename the folder";
     $imaptalk->rename($folder1, $folder2)
-	or die "Cannot rename $folder1 to $folder2: $@";
+        or die "Cannot rename $folder1 to $folder2: $@";
 
     xlog "Try to deliver the same message again";
     $self->{instance}->deliver($msgs{1}, folder => $folder2);
@@ -443,7 +440,7 @@ sub test_duplicate_suppression_on_delete
     xlog "Create the target folder";
     my $imaptalk = $self->{store}->get_client();
     $imaptalk->create($folder)
-	or die "Cannot create $folder: $@";
+        or die "Cannot create $folder: $@";
 
     xlog "Deliver a message";
     my %msgs;
@@ -457,11 +454,11 @@ sub test_duplicate_suppression_on_delete
     xlog "Delete the folder";
     $imaptalk->unselect();
     $imaptalk->delete($folder)
-	or die "Cannot delete $folder: $@";
+        or die "Cannot delete $folder: $@";
 
     xlog "Create another folder of the same name";
     $imaptalk->create($folder)
-	or die "Cannot create another $folder: $@";
+        or die "Cannot create another $folder: $@";
 
     xlog "Check that all messages are gone";
     $self->{store}->set_folder($folder);
@@ -502,7 +499,7 @@ sub test_duplicate_suppression_on_badmbox
     xlog "Create a folder of the given name";
     my $imaptalk = $self->{store}->get_client();
     $imaptalk->create($folder)
-	or die "Cannot create $folder: $@";
+        or die "Cannot create $folder: $@";
 
     xlog "Try to deliver the same message to the new folder";
     $self->{instance}->deliver($msgs{1}, folder => $folder);
@@ -510,6 +507,40 @@ sub test_duplicate_suppression_on_badmbox
     xlog "Check that the message made it, to the given folder";
     $self->{store}->set_folder($folder);
     $self->check_messages(\%msgs, check_guid => 0, keyed_on => 'uid');
+}
+
+sub test_delivery_internal_date
+{
+    my ($self) = @_;
+    my $imaptalk = $self->{store}->get_client();
+    my $folder = "INBOX.foobar";
+
+    $self->{store}->set_fetch_attributes('uid', 'internaldate');
+
+    xlog "Deliver a message";
+    my %msgs;
+    $msgs{1} = $self->{gen}->generate(subject => "Internaldate Test");
+    $msgs{1}->set_attribute(uid => 1);
+    $self->{instance}->deliver($msgs{1}, folder => $folder);
+
+    xlog "Check that the message made it, to the INBOX";
+    $self->{store}->set_folder('INBOX');
+    $self->check_messages(\%msgs, check_guid => 0, keyed_on => 'uid');
+
+    xlog "Create a folder: $folder";
+    $imaptalk->create($folder) or die "Cannot create $folder: $@";
+
+    xlog "Sleep for 3 seconds";
+    sleep 3;
+
+    xlog "Try to delivery the same message to the new folder";
+    xlog "The received date will be the same. The INTERNALDATE will be different.";
+    $self->{instance}->deliver($msgs{1}, folder => $folder);
+
+    xlog "Check that message made it, to the given folder";
+    $self->{store}->set_folder($folder);
+    $self->check_messages(\%msgs, check_guid => 0, keyed_on => 'uid');
+
 }
 
 1;
