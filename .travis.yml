@@ -1,0 +1,70 @@
+language: perl
+sudo: required
+dist: trusty
+group: edge
+addons:
+  apt:
+    packages:
+    - libmagic-dev
+    - libio-socket-inet6-perl
+env:
+  global:
+  - PERL5LIB=$PERL5LIB:/usr/share/perl5
+cache:
+  apt: true
+os: linux
+compiler: gcc
+install:
+- dpkg-query -L libio-socket-inet6-perl
+- cpanm --notest Test::Unit
+- cpanm --notest Config::IniFiles
+- cpanm --notest Socket6
+- cpanm --notest AnyEvent
+- cpanm --notest DateTime
+- cpanm --notest BSD::Resource
+- cpanm --notest XML::Generator
+- cpanm --notest XML::Parser::Expat
+- cpanm --notest File::Slurp
+- cpanm --notest Encode::IMAPUTF7
+- cpanm --notest IO::Stringy
+- cpanm --notest News::NNTPClient
+- cpanm --notest String::CRC32.pm
+- cpanm --notest File::chdir
+- cpanm --notest Net::Server
+- cpanm --notest Unix::Syslog
+- cpanm --notest Data::UUID
+- cpanm --notest JSON::XS
+- cpanm --notest Data::ICal
+- cpanm --notest JSON
+- cpanm --notest DateTime::Format::ICal
+- cpanm --notest Text::LevenshteinXS
+- cpanm --notest MIME::Types
+- cpanm --notest DateTime::Format::ISO8601
+- cpanm --notest Clone
+- cpanm --notest Math::Int64
+- cpanm --notest Tie::DataUUID
+- cpanm --notest XML::Spice
+- cpanm --notest XML::Fast
+- cpanm --notest XML::DOM
+- cpanm --notest Data::ICal::TimeZone
+- cpanm --notest Text::VCardFast
+- cpanm --notest Mail::IMAPTalk
+- cpanm --notest List::Pairwise
+- cpanm --notest Convert::Base64
+- cpanm --notest Set::Infinite
+- cpanm --verbose --no-interactive --notest File::LibMagic
+- cpanm --notest https://github.com/cyrusimap/Mail-JMAPTalk.git
+- cpanm --notest https://github.com/cyrusimap/Net-DAVTalk.git
+- cpanm --notest https://github.com/cyrusimap/Net-CalDAVTalk.git
+- cpanm --notest https://github.com/cyrusimap/Net-CardDAVTalk.git
+script:
+- make
+branches:
+  only:
+  - master
+
+#notifications:
+#  slack:
+#    on_pull_requests: false
+#    on_success: change
+#    on_failure: always
